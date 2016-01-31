@@ -1,16 +1,15 @@
 name:                zb
 version:             0.1.0.0
-synopsis:            Initial project template from stack
-description:         Please see README.md
-homepage:            http://github.com/githubuser/zb#readme
+synopsis:            !
+description:         ?
+homepage:            http://github.com/kivikakk/zb#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2010 Author Here
-category:            Web
+author:              Yuki Izumi
+maintainer:          yuki@kivikakk.ee
+copyright:           2015 Yuki Izumi
+category:            Nope
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 library
@@ -19,6 +18,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , attoparsec
                      , text
+                     , containers
   default-language:    Haskell2010
 
 executable zb-exe
@@ -27,6 +27,7 @@ executable zb-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , zb
+                     , containers
   default-language:    Haskell2010
 
 test-suite zb-test
