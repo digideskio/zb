@@ -3,5 +3,8 @@ module Main where
 import Lib
 
 main :: IO ()
-main =
-  fmap parse getLine >>= print
+main = do
+        sexp <- fmap parse getLine
+        print sexp
+        let aexp = compile sexp
+        print aexp
