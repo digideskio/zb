@@ -1,7 +1,9 @@
 module Main where
 
 import qualified Data.Map.Strict as Map
-import Lib
+import Parser (parse)
+import Compiler (compile, Type(..), Value(..))
+
 
 env :: [(String, Type, Value)]
 env = [
