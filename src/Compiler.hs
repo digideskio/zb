@@ -10,6 +10,10 @@ import Data.Map.Strict (Map)
 
 import Parser (AST(..))
 
+{-
+ - Start with a statement based language (!!) and work our way up.
+ -}
+
 data Type = TInteger
           | TFunction [Type] (Maybe Type) Type  -- args, *args, return
           deriving (Show)
