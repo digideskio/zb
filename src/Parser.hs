@@ -1,6 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Parser
     ( parse
-    , AST(..)
+    , SExp(..)
     ) where
 
 import qualified Data.Attoparsec.Text as A
@@ -10,21 +12,24 @@ import Control.Applicative ((<|>))
 import Data.Attoparsec.Text (Parser)
 
 
-data AST = SAtom String
-         | SInteger Integer
-         | SList [AST]
-         deriving (Show)
+data SExp = SAtom String
+          | SInteger Integer
+          | SSymbol String
+          | SList [SExp]
+          deriving (Show)
 
-parse :: String -> AST
-parse str = case A.parseOnly ast (T.pack str) of
+parse :: String -> [SExp]
+parse str = case A.parseOnly (AC.many1 sexp) (T.pack str) of
                  Left e -> error e
                  Right r -> r
 
-ast :: Parser AST
-ast = integer <|> atom <|> list
-      where integer = SInteger . read . T.unpack <$> A.takeWhile1 (A.inClass "0-9")
-            -- broken: "1a" will read as (SInteger 1) (SAtom "a").
-            -- should maybe error or something instead.
-            -- should read until " \t\r\n)" or EOF. anything else is a mistake
-            atom = SAtom . T.unpack <$> A.takeWhile1 (A.inClass "-a-zA-Z0-9+*/_")
-            list = SList <$> (A.string (T.pack "(") *> AC.manyTill (A.skipSpace *> ast <* A.skipSpace) (A.string (T.pack ")")))
+sexp :: Parser SExp
+sexp = integer <|> atom <|> symbol <|> list
+       where integer = SInteger . read . T.unpack <$> A.takeWhile1 (A.inClass "0-9")
+             -- broken: "1a" will read as (SInteger 1) (SAtom "a").
+             -- should maybe error or something instead.
+             -- should read until " \t\r\n)" or EOF. anything else is a mistake
+             atom = SAtom . T.unpack <$> atom_symbol_inner
+             symbol = SSymbol . T.unpack <$> (A.string ":" *> atom_symbol_inner)
+             atom_symbol_inner = A.takeWhile1 (A.inClass "-a-zA-Z0-9+*/_=")
+             list = SList <$> (A.string "(" *> AC.manyTill (A.skipSpace *> sexp <* A.skipSpace) (A.string ")"))
