@@ -10,12 +10,12 @@ main = do
                     "(func main ((arg string)) integer",
                     "  (print \"Hi!\")",
                     "  (print arg)",
-                    "  (return :a))"
+                    "  (return (print \"oh\")))"
                     ]
 
         let env = Map.insert "print" (TFunction [TString] TInteger) emptyEnv
         let (_, fns) = foldr applySexp (env, []) sexps
-        print "fns: "
+        putStrLn "fns: "
         print fns
 
         where applySexp :: SExpr -> (Env, [Function]) -> (Env, [Function])

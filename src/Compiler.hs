@@ -38,9 +38,10 @@ data Expr = EInteger Integer
           | ESymbol String
           | EString String
           | ELookup String Type
+          | EFuncall Expr [Expr]
           deriving (Show)
 
-data Statement = StFuncall Expr [Expr]
+data Statement = StEval Expr
                | StReturn Expr
                deriving (Show)
 
@@ -84,16 +85,15 @@ func env fnname args ret rest =
 stmt :: Type -> ([Statement], Env) -> SExpr -> ([Statement], Env)
 stmt retType (stmts, env) sexpr =
         case sexpr of
-             SList [SAtom "return", e] ->
-                     let e' = expr env e in
-                     if exprType e' /= retType
+             SList [SAtom "return", eSexpr] ->
+                     let e = expr env eSexpr in
+                     if exprType e /= retType
                         then error (
                                 "return typecheck fail: function has type " ++
-                                show retType ++ " but returning " ++ show e' ++
-                                " of type "++ show (exprType e'))
-                        else (stmts ++ [StReturn $ expr env e], env)
-             SList (callee:args) -> (stmts ++ [StFuncall (expr env callee) (map (expr env) args)], env)
-             _ -> error "stmt"
+                                show retType ++ " but returning " ++ show e ++
+                                " of type " ++ show (exprType e))
+                        else (stmts ++ [StReturn e], env)
+             _ -> (stmts ++ [StEval (expr env sexpr)], env)
 
 expr :: Env -> SExpr -> Expr
 expr _ (SInteger i) = EInteger i
@@ -103,6 +103,24 @@ expr env (SAtom a) =
         case Map.lookup a env of
              Just t -> ELookup a t
              Nothing -> error $ "lookup: " ++ a
+expr env (SList (calleeSexpr:argSexprs)) =
+        let callee = expr env calleeSexpr
+            args = map (expr env) argSexprs
+        in
+        case exprType callee of
+             TFunction calleeArgTypes _ ->
+                     if length args /= length calleeArgTypes
+                        then error (
+                                "funcall typecheck fail: argument count mismatch (" ++
+                                show (length args) ++ " /= " ++ show (length calleeArgTypes) ++ ")")
+                        else let argTypes = map exprType args in
+                              if argTypes /= calleeArgTypes
+                                 then error (
+                                         "funcall typecheck fail: argument type mismatch (" ++
+                                         show argTypes ++ " /= " ++ show calleeArgTypes ++ ")")
+                                 else EFuncall callee args
+             calleeType ->
+                     error $ "funcall typecheck fail: callee has type: " ++ show calleeType
 expr _ _ = error "expr"
 
 exprType :: Expr -> Type
@@ -110,3 +128,12 @@ exprType (EInteger _) = TInteger
 exprType (ESymbol _) = TSymbol
 exprType (EString _) = TString
 exprType (ELookup _ t) = t
+exprType (EFuncall callee _) =
+        case exprType callee of
+             TFunction _ calleeRetType -> calleeRetType
+             calleeType ->
+                     -- we should never construct an EFuncall to
+                     -- a non-TFunction, so it's a bug if this happens.
+                     -- how can I put this in the type system without it
+                     -- being super awkward?
+                     error $ "funcall typecheck fail: callee has type (II): " ++ show calleeType
