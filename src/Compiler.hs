@@ -26,16 +26,20 @@ import Parser (SExp(..))
 
 data Type = TInteger
           | TSymbol
+          | TString
           | TFunction [Type] Type  -- args, return
           deriving (Show)
 
-data Function = Function String [(String, Type)] [Statement] deriving (Show)
+data Function = Function String [(String, Type)] Type [Statement] deriving (Show)
 
 data Exp = EInteger Integer
          | ESymbol String
+         | EString String
          deriving (Show)
 
-data Statement = SFuncall String [Exp] deriving (Show)
+data Statement = SFuncall String [Exp]
+               | SReturn Exp
+               deriving (Show)
 
 type Env = Map String Type
 
@@ -45,12 +49,27 @@ emptyEnv = Map.empty
 top :: Env -> SExp -> (Env, Function)
 top env sexp =
         case sexp of
-             SList (SAtom "func" : SAtom fnname : SList args : rest) -> func env fnname args rest
-             _ -> error "bad form at top level"
+             SList (SAtom "func" : SAtom fnname : SList args : ret : rest) -> func env fnname args ret rest
+             _ -> error "top"
 
-func :: Env -> String -> [SExp] -> [SExp] -> (Env, Function)
-func env fnname args rest =
-        -- TODO: parse statements, type everything, add TFunction to env
-        -- and return fn.
-        let fn = Function fnname [] [] in
-        (env, fn)
+resolveBinding :: SExp -> (String, Type)
+resolveBinding (SList [SAtom name, typ]) = (name, resolveType typ)
+resolveBinding _ = error "resolveBinding"
+
+resolveType :: SExp -> Type
+resolveType (SAtom "integer") = TInteger
+resolveType (SAtom "symbol") = TSymbol
+resolveType (SAtom "string") = TString
+resolveType _ = error "resolveType"
+
+func :: Env -> String -> [SExp] -> SExp -> [SExp] -> (Env, Function)
+func env fnname args ret rest =
+        let argBindings = map resolveBinding args
+            retType = resolveType ret
+
+            localEnv = foldr (uncurry Map.insert) emptyEnv argBindings
+
+            fn = Function fnname argBindings retType []
+            fnt = TFunction (map snd argBindings) retType
+        in
+        (Map.insert fnname fnt env, fn)

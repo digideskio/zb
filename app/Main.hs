@@ -6,7 +6,7 @@ import Compiler (Env, Function, top, emptyEnv)
 main :: IO ()
 main = do
         let sexps = parse $ unlines [
-                    "(func main ()",
+                    "(func main ((arg string)) integer",
                     "  (print \"Hi!\")",
                     "  (return 0))"
                     ]

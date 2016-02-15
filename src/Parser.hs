@@ -21,7 +21,7 @@ data SExp = SAtom String
 
 parse :: String -> [SExp]
 parse str = case A.parseOnly (AC.many1 sexp) (T.pack str) of
-                 Left e -> error e
+                 Left e -> error ("parse: " ++ e)
                  Right r -> r
 
 sexp :: Parser SExp
