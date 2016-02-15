@@ -7,7 +7,9 @@ module Compiler
     ) where
 
 import qualified Data.Map.Strict as Map
-import Data.Foldable (foldl')
+import Control.Monad (foldM)
+import Control.Monad.Reader (ReaderT, runReaderT, ask)
+import Control.Monad.Writer (Writer, execWriter, tell)
 import Data.Map.Strict (Map)
 
 import Parser (SExpr(..))
@@ -53,7 +55,7 @@ emptyEnv = Map.empty
 top :: Env -> SExpr -> (Env, Function)
 top env sexpr =
         case sexpr of
-             SList (SAtom "func" : SAtom fnname : SList args : ret : rest) -> func env fnname args ret rest
+             SList (SAtom "func" : SAtom fnName : SList args : ret : rest) -> func env fnName args ret rest
              _ -> error "top"
 
 resolveBinding :: SExpr -> (String, Type)
@@ -67,33 +69,33 @@ resolveType (SAtom "string") = TString
 resolveType _ = error "resolveType"
 
 func :: Env -> String -> [SExpr] -> SExpr -> [SExpr] -> (Env, Function)
-func env fnname args ret rest =
+func env fnName args ret rest =
         let argBindings = map resolveBinding args
             retType = resolveType ret
 
             localEnv = foldr (uncurry Map.insert) env argBindings
 
-            body = fst $ foldl' (stmt retType) ([], localEnv) rest
+            body = execWriter $ flip runReaderT (fnName, retType) $ foldM stmt localEnv rest
 
-            fn = Function fnname argBindings retType body
+            fn = Function fnName argBindings retType body
             fnt = TFunction (map snd argBindings) retType
         in
-        (Map.insert fnname fnt env, fn)
+        (Map.insert fnName fnt env, fn)
 
--- put this in Writer maybe
--- I kinda also want Reader for the function context
-stmt :: Type -> ([Statement], Env) -> SExpr -> ([Statement], Env)
-stmt retType (stmts, env) sexpr =
+stmt :: Env -> SExpr -> ReaderT (String, Type) (Writer [Statement]) Env
+stmt env sexpr =
         case sexpr of
              SList [SAtom "return", eSexpr] ->
                      let e = expr env eSexpr in
+                     ask >>= \(fnName, retType) ->
                      if exprType e /= retType
                         then error (
-                                "return typecheck fail: function has type " ++
-                                show retType ++ " but returning " ++ show e ++
-                                " of type " ++ show (exprType e))
-                        else (stmts ++ [StReturn e], env)
-             _ -> (stmts ++ [StEval (expr env sexpr)], env)
+                                "return typecheck fail: function " ++
+                                fnName ++ " has type " ++ show retType ++
+                                " but returning " ++ show e ++ " of type " ++
+                                show (exprType e))
+                        else tell [StReturn e] >> return env
+             _ -> tell [StEval (expr env sexpr)] >> return env
 
 expr :: Env -> SExpr -> Expr
 expr _ (SInteger i) = EInteger i

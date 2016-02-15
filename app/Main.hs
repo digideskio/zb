@@ -10,6 +10,7 @@ main = do
                     "(func main ((arg string)) integer",
                     "  (print \"Hi!\")",
                     "  (print arg)",
+                    "  (return :x)",
                     "  (return (print \"oh\")))"
                     ]
 
