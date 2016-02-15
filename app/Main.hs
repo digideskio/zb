@@ -1,21 +1,24 @@
 module Main where
 
-import Parser (parse, SExp)
-import Compiler (Env, Function, top, emptyEnv)
+import qualified Data.Map.Strict as Map
+import Parser (parse, SExpr)
+import Compiler (Env, Function, Type(..), top, emptyEnv)
 
 main :: IO ()
 main = do
         let sexps = parse $ unlines [
                     "(func main ((arg string)) integer",
                     "  (print \"Hi!\")",
-                    "  (return 0))"
+                    "  (print arg)",
+                    "  (return :a))"
                     ]
-        print sexps
-        let (env, fns) = foldr applySexp (emptyEnv, []) sexps
-        print env
+
+        let env = Map.insert "print" (TFunction [TString] TInteger) emptyEnv
+        let (_, fns) = foldr applySexp (env, []) sexps
+        print "fns: "
         print fns
 
-        where applySexp :: SExp -> (Env, [Function]) -> (Env, [Function])
-              applySexp sexp (env, fns) =
-                      let (env', fn') = top env sexp in
+        where applySexp :: SExpr -> (Env, [Function]) -> (Env, [Function])
+              applySexp sexpr (env, fns) =
+                      let (env', fn') = top env sexpr in
                       (env', fn':fns)
