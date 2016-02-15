@@ -5,7 +5,11 @@ import Compiler (Env, Function, top, emptyEnv)
 
 main :: IO ()
 main = do
-        sexps <- fmap parse getLine
+        let sexps = parse $ unlines [
+                    "(func main ()",
+                    "  (print \"Hi!\")",
+                    "  (return 0))"
+                    ]
         print sexps
         let (env, fns) = foldr applySexp (emptyEnv, []) sexps
         print env

@@ -31,7 +31,11 @@ data Type = TInteger
 
 data Function = Function String [(String, Type)] [Statement] deriving (Show)
 
-data Statement = Statement deriving (Show)
+data Exp = EInteger Integer
+         | ESymbol String
+         deriving (Show)
+
+data Statement = SFuncall String [Exp] deriving (Show)
 
 type Env = Map String Type
 
