@@ -1,7 +1,7 @@
 module Compiler
     ( Type(..)
     , top
-    , Function
+    , Function(..)
     , Env
     , emptyEnv
     ) where
